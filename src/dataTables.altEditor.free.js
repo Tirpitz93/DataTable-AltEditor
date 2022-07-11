@@ -754,9 +754,8 @@
                 // data += "</form>";
 
                 var selector = this.modal_selector;
-                var fill = function () 
-                {
-                    var btns = '<button type="button" data-content="remove" class="btn btn-default button secondary" data-dismiss="modal" data-close>' + closeCaption + '</button>' 
+                var fill = function () {
+                    var btns = '<button type="button" data-content="remove" class="btn btn-default button secondary" data-dismiss="modal" data-bs-dismiss="modal" data-close>' + closeCaption + '</button>'
                         + '<button type="submit" form="' + formName + '" data-content="remove" class="btn btn-primary button" id="' + buttonClass + '">' + buttonCaption + '</button>';
 
                     $(selector).find('.modal-title').html(modalTitle);
