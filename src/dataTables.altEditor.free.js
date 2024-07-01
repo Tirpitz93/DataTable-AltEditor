@@ -364,8 +364,22 @@
                         // Added Select2
                         if (columnDefs[j].type.indexOf("select") >= 0 && columnDefs[j].select2) {
                             var jsonValue = undefined;
-                            try { jsonValue = JSON.parse(selectedValue); } catch (e) { }
-                            if (typeof jsonValue === 'object') { selectedValue = jsonValue; }
+                            if(typeof selectedValue === 'object') {
+                               jsonValue = selectedValue;
+                            }
+
+                            else
+                            {
+                                try {
+                                    jsonValue = JSON.parse(selectedValue);
+                                } catch (e) {
+                                    console.error("Error parsing JSON value for select2", e)
+
+                                }
+                                if (typeof jsonValue === 'object') {
+                                    selectedValue = jsonValue;
+                                }
+                            }
                         }
                         // Added checkbox
                         else if (columnDefs[j].type.indexOf("checkbox") >= 0) {
