@@ -251,23 +251,47 @@
 
                 // Bind 'unique' error messages
                 $(this.modal_selector).on('input', '[data-unique]', function(elm) {
+                    checkUnique(elm);
+                });
+
+                $(this.modal_selector).on('change', 'select[data-unique]', function (elm) {
+                    checkUnique(elm);
+                });
+
+                function checkUnique(elm) {
+                    console.log(elm);
                     if ($(elm.target).attr('data-unique') == null || $(elm.target).attr('data-unique') === 'false') {
                         return;
                     }
-                    var target = $(elm.target);
-                    var colData = dt.column("th:contains('" + target.attr("name") + "')").data();
+                    const target = $(elm.target);
+                    const name = target.attr('name');
+                    const index = getColumnNumberByName(name, dt);
+                    const colData = dt.column(index).data().toArray() ?? [];
                     // go through each item in this column
-                    var selectedCellData = null;
+                    let selectedCellData = null;
                     if (dt.row({selected: true}).index() != null)
-                        selectedCellData = dt.cell(dt.row({selected: true}).index(), dt.column("th:contains('" + target.attr("name") + "')").index()).data();
+                        selectedCellData = dt.cell(dt.row({ selected: true }).index(), index).data();
                     elm.target.setCustomValidity('');
-                    for (var j in colData) {
+                    for (let j in colData) {
                         // if the element is in the column and its not the selected one then its not unique
                         if (target.val() == colData[j] && colData[j] != selectedCellData) {
                             elm.target.setCustomValidity(that.language.error.unique);
+                            break;
                         }
                     }
-                });
+                }
+
+                function getColumnNumberByName(name, dt) {
+                    let index = null;
+                    dt.columns().every(function (i) {
+                        let $th = dt.columns(`:eq(${i})`).header().to$();
+                        if ($th.attr('name') && $th.attr('name') == name) {
+                            index = i;
+                            return true;
+                        }
+                    })
+                    return index;
+                }
 
                 // Add Refresh button
                 if (this.s.dt.button('refresh:name')) {
@@ -301,6 +325,9 @@
                     title: this.language.add.title || 'Add record',
                     button: this.language.add.button || 'Add'
                 };
+                this.language.deleteMessage =
+                  this.language.deleteMessage ||
+                  "Are you sure you wish to delete this row?";
                 this.language.success = this.language.success || 'Success!';
                 this.language.error = this.language.error || {};
                 this.language.error = { 
@@ -484,7 +511,7 @@
                     var btns = '<button type="button" data-content="remove" class="btn btn-default button secondary" data-close data-dismiss="modal">' + that.language.modalClose + '</button>' +
                         '<button type="submit"  data-content="remove" class="btn btn-danger button" id="deleteRowBtn">' + that.language.delete.button + '</button>';
                     $(selector).find('.modal-title').html(that.language.delete.title);
-                    $(selector).find('.modal-body').html(that.language.deleteMessage || `<h5>Are you sure you wish to delete ${adata.count()} rows?</h5>`);
+                    $(selector).find('.modal-body').html(that.language.deleteMessage);
                     $(selector).find('.modal-footer').html(btns);
                     var modalContent = $(selector).find('.modal-content');
                     if (modalContent.parent().is('form')) {
@@ -533,6 +560,15 @@
                 var selector = this.modal_selector;
                 $(selector + ' input[0]').trigger('focus');
                 $(selector).trigger("alteditor:some_dialog_opened").trigger("alteditor:add_dialog_opened");
+                for (var j in columnDefs) { //added default value
+                    if (columnDefs[j].name != null && columnDefs[j].value!=null)  {
+                        var jquerySelector = "#" + columnDefs[j].name.toString().replace(/\./g, "\\.");
+                        $(selector).find(jquerySelector)
+                                    .filter(':input[type!="file"]').val(columnDefs[j].value) // this._quoteattr or not? see #121
+                                                                    .trigger("change"); // required by select2
+                    }
+                }
+              
             },
 
             selectionListener: function() {
@@ -658,14 +694,14 @@
                             if (optionsArray.length > 0) {
                                 // array-style select or select2
                                 for (var i = 0; i < optionsArray.length; i++) {
-                                    options += "<option value='" + this._quoteattr(optionsArray[i])
+                                    options += "<option value='" + this._quoteattr(optionsArray[i])							
                                         + "'>" + optionsArray[i] + "</option>";
                                 }
                             } else {
                                 // object-style select or select2
                                 for (var x in optionsArray) {
-                                    options += "<option value='" + this._quoteattr(x) + "' >"
-                                        + optionsArray[x] + "</option>";
+                                    options += "<option value='" + this._quoteattr(x) + "'>"
+                                    + optionsArray[x] + "</option>";
                                 }
                             }
 
@@ -693,7 +729,7 @@
                         // Adding text-inputs and error labels, but also new HTML5 types (email, color, ...)
                         else {
                             data += "<input class='form-control' "
-                                + fillAttrs(columnDefs[j], ['type', 'pattern', 'accept', 'name', 'step', 'min', 'max', 'maxLength', 'value', 'readonly', 'disabled', 'required'])
+                                + fillAttrs(columnDefs[j], ['type', 'pattern', 'accept', 'name', 'step', 'min', 'max', 'maxLength', 'readonly', 'disabled', 'required'])
                                 + /* ???? */ (columnDefs[j].type.indexOf("readonly") >= 0 ? "readonly " : "") 
                                 + "id='" + this._quoteattr(columnDefs[j].name) + "' "
                                 + "title='" + this._quoteattr(columnDefs[j].hoverMsg) + "' "
@@ -746,6 +782,7 @@
                 for (var j in columnDefs) {
                     if (columnDefs[j].select2) {
                         // Require select2 plugin
+						 columnDefs[j].select2.dropdownParent = $("#altEditor-modal-" + this.random_id); //fixes focus issue with select2 per #217
                         $(selector).find("select#" + columnDefs[j].name).select2(columnDefs[j].select2);
                     } 
                     else if (columnDefs[j].datepicker) {
